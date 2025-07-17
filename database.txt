@@ -1,0 +1,99 @@
+-- Create Database
+CREATE DATABASE CarRentalSystem;
+USE CarRentalSystem;
+
+-- Office Table
+CREATE TABLE Office (
+    OfficeID INT PRIMARY KEY AUTO_INCREMENT,
+    OfficeName VARCHAR(100) NOT NULL,
+    Address VARCHAR(255) NOT NULL,
+    Phone VARCHAR(20) NOT NULL,
+    Email VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- Customer Table
+CREATE TABLE Customer (
+    CustomerID INT PRIMARY KEY AUTO_INCREMENT,
+    FirstName VARCHAR(50) NOT NULL,
+    LastName VARCHAR(50) NOT NULL,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    Phone VARCHAR(20) NOT NULL,
+    Address VARCHAR(255) NOT NULL,
+    DateOfBirth DATE NOT NULL,
+    LicenseNumber VARCHAR(50) UNIQUE NOT NULL,
+    LicenseExpirationDate DATE NOT NULL,
+    RegistrationDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Car Table
+CREATE TABLE Car (
+    CarID INT PRIMARY KEY AUTO_INCREMENT,
+    Model VARCHAR(50) NOT NULL,
+    Year INT NOT NULL,
+    PlateID VARCHAR(20) UNIQUE NOT NULL,
+    Status ENUM('active', 'out_of_service', 'rented') NOT NULL DEFAULT 'active',
+    Color VARCHAR(30) NOT NULL,
+    DailyRentalRate DECIMAL(10,2) NOT NULL,
+    OfficeID INT NOT NULL,
+    FOREIGN KEY (OfficeID) REFERENCES Office(OfficeID)
+);
+
+-- Reservation Table
+CREATE TABLE Reservation (
+    ReservationID INT PRIMARY KEY AUTO_INCREMENT,
+    CustomerID INT NOT NULL,
+    CarID INT NOT NULL,
+    StartDate DATETIME NOT NULL,
+    EndDate DATETIME NOT NULL,
+    PickupOfficeID INT NOT NULL,
+    ReturnOfficeID INT NOT NULL,
+    Status ENUM('confirmed', 'completed', 'cancelled') NOT NULL DEFAULT 'confirmed',
+    TotalCost DECIMAL(10,2) NOT NULL,
+    ReservationDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (CustomerID) REFERENCES Customer(CustomerID),
+    FOREIGN KEY (CarID) REFERENCES Car(CarID),
+    FOREIGN KEY (PickupOfficeID) REFERENCES Office(OfficeID),
+    FOREIGN KEY (ReturnOfficeID) REFERENCES Office(OfficeID)
+);
+
+-- Payment Table
+CREATE TABLE Payment (
+    PaymentID INT PRIMARY KEY AUTO_INCREMENT,
+    ReservationID INT UNIQUE NOT NULL,
+    Amount DECIMAL(10,2) NOT NULL,
+    PaymentDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PaymentMethod ENUM('credit_card', 'debit_card', 'cash', 'bank_transfer') NOT NULL,
+    Status ENUM('completed', 'pending', 'failed') NOT NULL DEFAULT 'pending',
+    FOREIGN KEY (ReservationID) REFERENCES Reservation(ReservationID)
+);
+
+-- Indexes for Performance
+CREATE INDEX idx_car_status ON Car(Status);
+CREATE INDEX idx_reservation_status ON Reservation(Status);
+CREATE INDEX idx_customer_email ON Customer(Email);
+CREATE INDEX idx_payment_status ON Payment(Status);
+
+-- Sample Data Insertion Stored Procedure
+DELIMITER //
+CREATE PROCEDURE PopulateSystemData()
+BEGIN
+    -- Insert Sample Offices
+    INSERT INTO Office (OfficeName, Address, Phone, Email) VALUES
+    ('Downtown Office', '123 Main St, City, Country', '+1234567890', 'downtown@carrentals.com'),
+    ('Airport Branch', 'Airport Terminal 1, City, Country', '+1987654321', 'airport@carrentals.com');
+
+    -- Insert Sample Customers
+    INSERT INTO Customer (FirstName, LastName, Email, Phone, Address, DateOfBirth, LicenseNumber, LicenseExpirationDate) VALUES
+    ('John', 'Doe', 'john.doe@example.com', '+1555123456', '456 Elm St, City, Country', '1990-05-15', 'DL12345', '2025-12-31'),
+    ('Jane', 'Smith', 'jane.smith@example.com', '+1555789012', '789 Oak Ave, City, Country', '1985-08-22', 'DL67890', '2026-06-30');
+
+    -- Insert Sample Cars
+    INSERT INTO Car (Model, Year, PlateID, Status, Color, DailyRentalRate, OfficeID) VALUES
+    ('Toyota Camry', 2022, 'ABC123', 'active', 'Silver', 50.00, 1),
+    ('Honda Civic', 2021, 'XYZ789', 'active', 'Blue', 45.00, 2),
+    ('Ford Mustang', 2023, 'DEF456', 'out_of_service', 'Red', 75.00, 1);
+END //
+DELIMITER ;
+
+-- Call the stored procedure to populate initial data
+CALL PopulateSystemData();
